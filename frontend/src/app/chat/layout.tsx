@@ -79,7 +79,7 @@ export default function ChatLayout({
             </Sheet>
             {/* --- จบส่วน Hamburger --- */}
 
-            <h1 className="text-xl font-bold">University AI Chatbot</h1>
+            <h1 className="text-xl font-bold">SLF AI Chatbot</h1>
           </div>
           <UserNav /> {/* (คอมโพเนนต์โปรไฟล์) */}
         </div>

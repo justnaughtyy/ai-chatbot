@@ -48,24 +48,24 @@ async function getRecentChatHistory(roomId, limit = 3) {
             .where('roomId', '==', roomId)
             .orderBy('timestamp', 'desc') // ‼️ Index นี้ต้องมี
             .limit(limit);
-            
+
         const snapshot = await query.get();
-        if (snapshot.empty) { 
-            console.log(`[HISTORY V33] No history found for room.`); 
-            return []; 
+        if (snapshot.empty) {
+            console.log(`[HISTORY V33] No history found for room.`);
+            return [];
         }
-        
+
         const history = [];
         snapshot.docs.reverse().forEach(doc => {
             const data = doc.data();
             if (data.userMessage) history.push({ role: 'user', content: data.userMessage.substring(0, 200) });
-            if (data.botResponse) history.push({ role: 'assistant', content: data.botResponse.substring(0, 300) });
+            if (data.botResponse) history.push({ role: 'assistant', content: data.botResponse.substring(0, 500) });
         });
         console.log(`[HISTORY V33] Found and formatted ${snapshot.size} pairs.`);
         return history;
-    } catch (histError) { 
-        console.error("🔴 Error fetching chat history:", histError); 
-        return []; 
+    } catch (histError) {
+        console.error("🔴 Error fetching chat history:", histError);
+        return [];
     }
 }
 
@@ -165,7 +165,7 @@ async function getCalendarInfo() {
 // (Section นี้เหมือนเดิม V29 ไม่ต้องแก้)
 async function getSearchContext(userMessage, recentHistory, currentTimeString, calendarData) {
     console.log(`[V18-HELPER V29] Analyzing query: "${userMessage}"`);
-    const historyString = (recentHistory && recentHistory.length > 0) 
+    const historyString = (recentHistory && recentHistory.length > 0)
         ? recentHistory.map(h => `${h.role}: ${h.content}`).join('\n')
         : "ไม่มีประวัติ";
     const isoSem1Start = calendarData.semester_1_start.toDate().toISOString().split('T')[0];
@@ -183,13 +183,8 @@ async function getSearchContext(userMessage, recentHistory, currentTimeString, c
     * "เขียนคำถามล่าสุดใหม่" ให้เป็นประโยคที่สมบูรณ์ เข้าใจได้ในตัวเอง (Standalone Question)
 2.  **Extract Topic (search_topic):**
     * จาก "Standalone Question" ให้ "สรุปหัวข้อหลัก" ที่ใช้สำหรับค้นหา (ตัดวันที่และเวลาออก)
-3.  **Extract Date (target_iso_date):**
-    * วิเคราะห์ "Standalone Question" (ที่ได้จากข้อ 1) เพื่อหา "วันที่เป้าหมาย" ที่ผู้ใช้ถามถึง
-    * "แปลง" วันที่เป้าหมายนั้นให้อยู่ในรูปแบบ "YYYY-MM-DD"
-    * (ตัวอย่าง 1: "วันที่ 8 พฤศจิกายน 2568" -> "2025-11-08")
-    * (ตัวอย่าง 2: "วันนี้" (จาก ${currentTimeString}) -> "2025-10-24")
-    * **(สำคัญ!): ถ้าคำถามไม่ระบุวันที่เลย** (เช่น "ห้องสมุดเปิดกี่โมง" หรือ "ข้อมูล กยศ") ให้ตอบเป็น \`null\`
-จงตอบเป็น JSON Object ที่มี key: "standalone_query", "search_topic", และ "target_iso_date" (เป็น YYYY-MM-DD หรือ null เท่านั้น)`;
+3.  // แก้ไขข้อ 3. ในตัวแปร systemPrompt ของฟังก์ชัน getSearchContext
+* **(สำคัญ!): ถ้าคำถามไม่ระบุวันที่เลย** (เช่น "ขั้นตอนการยืนยันตัวตน" หรือ "ข้อมูล กยศ") ให้ตอบเป็น \`null\``;
     const userPrompt = `
 ## ข้อมูลประกอบการวิเคราะห์
 - เวลาปัจจุบัน: ${currentTimeString}
@@ -199,8 +194,8 @@ ${historyString}
 ## คำถามล่าสุด:
 ${userMessage}
 ## ผลการวิเคราะห์ (JSON เท่านั้น):`;
-    const fallbackResult = { 
-        standalone_query: userMessage, 
+    const fallbackResult = {
+        standalone_query: userMessage,
         search_topic: userMessage.replace(/วันที่|เดือน|พ.ศ.|[0-9/]/g, '').trim(),
         target_iso_date: null
     };
@@ -211,7 +206,7 @@ ${userMessage}
     }, 12000);
     try {
         const chatCompletion = await groq.chat.completions.create(
-            { 
+            {
                 messages: [
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
@@ -220,7 +215,7 @@ ${userMessage}
                 temperature: 0.0,
                 response_format: { type: "json_object" },
             },
-            { 
+            {
                 signal: controller.signal
             }
         );
@@ -290,27 +285,28 @@ async function callGroqLLM_RAG_V21_Synthesizer(userId, userMessage, retrievedDoc
     const timeoutId = setTimeout(() => {
         console.warn(`⚠️ Groq LLM (V31) request timed out for user: ${userId}`);
         controller.abort();
-    }, 15000);
+    }, 30000);
     try {
-        const systemPrompt = `คุณคือ AI ผู้ช่วยสังเคราะห์ข้อมูลที่แม่นยำ
+        const systemPrompt = `คุณคือ AI ผู้ช่วยให้คำปรึกษาด้านกองทุนกู้ยืมเพื่อการศึกษา (กยศ.) 
 หน้าที่ของคุณคือตอบ "คำถามล่าสุด" โดยการ **สังเคราะห์คำตอบจาก "เอกสารข้อมูล" ที่เตรียมมาให้เท่านั้น**
+
 ขั้นตอนการทำงาน:
-1.  อ่าน "คำถามล่าสุด" (เช่น "เวลาทำการห้องสมุด")
-2.  อ่าน "เอกสารข้อมูล" ทุกชิ้น
-3.  **(สำคัญที่สุด!)** ถ้ามีเอกสารหลายชิ้น (เช่น เอกสาร 1: เปิดเทอม, เอกสาร 2: ปิดเทอม) คุณ "ต้อง" สังเคราะห์คำตอบโดย "รวมข้อมูล" จาก "ทุก" เอกสาร
-    (ตัวอย่าง: "ช่วงเปิดเทอม เปิด... และช่วงปิดเทอม เปิด...")
-4.  สร้างคำตอบโดย "สรุปความ" จากเอกสารทั้งหมดที่ได้รับ
-ข้อห้าม (สำคัญมาก!):
-- ห้ามอ้างอิงถึง "เอกสารข้อมูล" หรือ "ข้อมูลที่ค้นเจอ"
+1. อ่าน "คำถามล่าสุด" (เช่น "ขั้นตอนการกู้ยืม", "กู้รายใหม่ใช้เอกสารอะไรบ้าง")
+2. อ่าน "เอกสารข้อมูล" ทุกชิ้น
+3. สังเคราะห์คำตอบโดย "รวมข้อมูล" จาก "ทุก" เอกสารให้ครบถ้วนและเข้าใจง่าย
+4. **(สำคัญมาก!) หากผู้ใช้ถามหาแหล่งที่มา ลิงก์ หรืออ้างอิง และในเอกสารมีลิงก์ (URL) หรือข้อความ "อ้างอิงจาก" ปรากฏอยู่ คุณต้องคัดลอกลิงก์นั้นส่งให้ผู้ใช้อย่างชัดเจน**
+
+ข้อห้าม:
+- ห้ามใช้คำพูดว่า "อ้างอิงจากเอกสารข้อมูลที่ 1" หรือ "ตามข้อมูลที่ค้นเจอ" (ให้ตอบเนื้อหาหรือให้ลิงก์ไปเลยอย่างเป็นธรรมชาติ)
 - ถ้าไม่เจอเอกสาร ให้ตอบว่า "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้"
-- ตอบเป็นภาษาไทย กระชับ ชัดเจน`;
+- ตอบเป็นภาษาไทย กระชับ ชัดเจน อัธยาศัยดี`;
         let contextString = "ไม่พบข้อมูล";
         if (retrievedDocs && retrievedDocs.length > 0) {
             contextString = retrievedDocs.map((doc, index) => `เอกสาร #${index + 1}:\n${doc.content.trim()}`).join('\n\n---\n\n');
         } else {
-             console.log("   [V31] No documents provided after reranking.");
-             clearTimeout(timeoutId);
-             return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
+            console.log("   [V31] No documents provided after reranking.");
+            clearTimeout(timeoutId);
+            return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
         }
         const historyString = recentHistory.map(h => `${h.role}: ${h.content}`).join('\n');
         const userPrompt = `
@@ -328,16 +324,17 @@ async function callGroqLLM_RAG_V21_Synthesizer(userId, userMessage, retrievedDoc
         const chatCompletion = await groq.chat.completions.create({
             messages: messagesForGroq,
             model: 'llama-3.1-8b-instant',
-            temperature: 0.1
+            temperature: 0.1,
+            max_tokens: 1024
         }, { signal: controller.signal });
         clearTimeout(timeoutId);
         console.log("✅ Received response from Groq (RAG V31).");
         const potentialResponse = chatCompletion.choices[0]?.message?.content;
         if (potentialResponse && potentialResponse.trim() !== '') {
-             let cleanedResponse = potentialResponse.trim();
-             cleanedResponse = cleanedResponse.replace(/^คำตอบ:/i, '').trim();
-             if (cleanedResponse === '*' || cleanedResponse === '-' || cleanedResponse === '•') return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
-             return cleanedResponse;
+            let cleanedResponse = potentialResponse.trim();
+            cleanedResponse = cleanedResponse.replace(/^คำตอบ:/i, '').trim();
+            if (cleanedResponse === '*' || cleanedResponse === '-' || cleanedResponse === '•') return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
+            return cleanedResponse;
         } else {
             console.log(`⚠️ Groq returned empty (RAG V31). Fallback.`);
             return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
@@ -412,78 +409,28 @@ app.post('/api/chat', async (req, res) => {
         // --- RAG V32 LOGIC (เหมือนเดิม) ---
         if (botResponse === null) {
             console.log(`⏳ Intent "${intent}" requires RAG V32. Starting process...`);
-            
+
             // 1. ดึงประวัติแชท (V33)
             const recentHistory = await getRecentChatHistory(roomId);
-            
+
             // 2. เรียก V29 Helper (70b) - (NLU)
             const { standalone_query, search_topic, target_iso_date } = await getSearchContext(
-                message, 
-                recentHistory, 
-                currentTimeString, 
+                message,
+                recentHistory,
+                currentTimeString,
                 calendarData
             );
+
+            // 3. และ 4. ค้นหา Vector Database ด้วย "Search Topic"
+            console.log(`[QUERY] Using Topic Search: "${search_topic}"`);
             
-            // 3. (V29) คำนวณ (ถ้ามีวันที่ระบุมาเท่านั้น)
-            let timeframe = "ไม่ระบุช่วงเวลา";
-            let day_type = "ไม่ระบุ";
+            // ดึงข้อมูลมาแค่ 3 ชิ้นที่คะแนนความเหมือน (Similarity) สูงที่สุดก็พอ 
+            // ไม่ต้องเผื่อไว้ 10 ชิ้นแล้วเพราะเราไม่ได้เอามาฟิลเตอร์เปิด/ปิดเทอมต่อแล้ว
+            let retrievedDocs = await searchVectorDatabase(search_topic, 3, 0.70);
 
-            if (target_iso_date) {
-                console.log(`[RAG V32] Specific date detected (${target_iso_date}). Running calculation...`);
-                ({ timeframe, day_type } = calculateTimeInfo(target_iso_date, calendarData));
-            } else {
-                console.log(`[RAG V32] No specific date detected (Broad Query).`);
-            }
-
-            // 4. ค้นหา Vector Database ด้วย "Search Topic"
-            console.log(`[QUERY V32] Using Topic Search: "${search_topic}"`);
-            let allRetrievedDocs = await searchVectorDatabase(search_topic, 10, 0.70); 
-
-            // 5. RERANKER V32 (Corrected Logic Order)
-            let retrievedDocs = [];
-            if (allRetrievedDocs.length > 0) {
-                if (timeframe === "ไม่ระบุช่วงเวลา") {
-                    // --- 5A. BROAD QUERY ---
-                    console.log(`[RERANK V32] Broad query detected. Checking for Evergreen status...`);
-                    const bestDoc = allRetrievedDocs[0];
-                    const isTimeSensitive = bestDoc.content.includes("ช่วงเปิดภาคเรียน") || bestDoc.content.includes("ช่วงปิดภาคเรียน");
-                    if (isTimeSensitive) {
-                        // --- 5A.1: Broad + Time-Sensitive ---
-                        console.log(`[RERANK V32] Broad, Time-Sensitive. Manually assembling all timeframes...`);
-                        const openDocs = allRetrievedDocs.filter(doc => doc.content.includes("ช่วงเปิดภาคเรียน"));
-                        const closedDocs = allRetrievedDocs.filter(doc => doc.content.includes("ช่วงปิดภาคเรียน"));
-                        let combinedDocs = [];
-                        if (openDocs.length > 0) combinedDocs.push(openDocs[0]);
-                        if (closedDocs.length > 0) combinedDocs.push(closedDocs[0]);
-                        if (combinedDocs.length > 0) {
-                             retrievedDocs = combinedDocs;
-                        } else {
-                             retrievedDocs = allRetrievedDocs.slice(0, 2); // Fallback
-                        }
-                    } else {
-                        // --- 5A.2: Broad + Evergreen ---
-                        console.log(`[RERANK V32] Broad, Evergreen. Skipping filters.`);
-                        retrievedDocs = allRetrievedDocs.slice(0, 3);
-                    }
-                } else {
-                    // --- 5B. SPECIFIC QUERY ---
-                    console.log(`[RERANK V32] Specific query detected. Filtering by ${timeframe} and ${day_type}.`);
-                    let filteredDocs = allRetrievedDocs.filter(doc => doc.content.includes(timeframe));
-                    if (day_type !== "ไม่ระบุ" && filteredDocs.length > 1) {
-                        const dayTypeFilteredDocs = filteredDocs.filter(doc => doc.content.includes(day_type));
-                        if (dayTypeFilteredDocs.length > 0) {
-                            filteredDocs = dayTypeFilteredDocs;
-                        }
-                    }
-                    retrievedDocs = filteredDocs.slice(0, 3);
-                }
-            } else {
-                retrievedDocs = [];
-            }
-            
             // 6. เรียกใช้ V31 Synthesizer
             botResponse = await callGroqLLM_RAG_V21_Synthesizer(
-                userId, 
+                userId,
                 search_topic, // ‼️ V26 FIX
                 retrievedDocs,
                 recentHistory
@@ -613,7 +560,7 @@ app.get('/api/chat/room/:roomId', async (req, res) => {
         const query = firestore.collection('chat_logs')
             .where('roomId', '==', roomId)
             .orderBy('timestamp', 'asc'); // ‼️ Index นี้ต้องมี
-            
+
         const snapshot = await query.get();
         console.log(`   [MESSAGES V33.1] Firestore query returned ${snapshot.size} documents.`);
         if (snapshot.empty) {
@@ -621,7 +568,7 @@ app.get('/api/chat/room/:roomId', async (req, res) => {
             console.log(`   [MESSAGES V33.1] Sending empty response.`);
             return res.json([]);
         }
-        
+
         const messages = snapshot.docs.map(doc => {
             const data = doc.data();
             // V33.1 FIX
@@ -634,7 +581,7 @@ app.get('/api/chat/room/:roomId', async (req, res) => {
                 { text: data.botResponse, sender: 'bot', website: data.website || null }
             ];
         }).filter(pair => pair !== null).flat();
-        
+
         console.log(`   ✅ Returning ${messages.length / 2} pairs of messages.`);
         console.log(`   [MESSAGES V33.1] Sending response.`);
         res.json(messages);
@@ -659,7 +606,7 @@ app.put('/api/chat/room/:roomId', async (req, res) => {
 
     try {
         const roomRef = firestore.collection('chat_rooms').doc(roomId);
-        
+
         await roomRef.update({
             title: title,
             lastUpdated: new Date() // อัปเดตเวลาด้วย

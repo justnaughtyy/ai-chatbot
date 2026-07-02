@@ -73,7 +73,7 @@ import { Inter } from 'next/font/google'
 const inter = Inter({ subsets: ['latin'] })
 
 export const metadata: Metadata = {
-  title: 'University AI Chatbot',
+  title: 'SLF AI Chatbot',
 }
 
 export default function RootLayout({
