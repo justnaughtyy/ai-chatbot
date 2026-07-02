@@ -69,7 +69,7 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
     let isMounted = true
     if (user) {
       setIsLoading(true)
-      fetch(`http://localhost:3001/api/chat/rooms/${user.uid}`)
+      fetch(`https://ai-chatbot-slf.onrender.com/api/chat/rooms/${user.uid}`)
         .then((res) => {
           if (!res.ok) throw new Error('Failed to fetch rooms')
           return res.json()
@@ -109,7 +109,7 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
 
     try {
       await fetch(
-        `http://localhost:3001/api/chat/room/${selectedRoom.roomId}`,
+        `https://ai-chatbot-slf.onrender.com/api/chat/room/${selectedRoom.roomId}`,
         {
           method: 'DELETE',
         }
@@ -151,7 +151,7 @@ export function Sidebar({ onLinkClick }: SidebarProps) {
 
     try {
       await fetch(
-        `http://localhost:3001/api/chat/room/${selectedRoom.roomId}`,
+        `https://ai-chatbot-slf.onrender.com/api/chat/room/${selectedRoom.roomId}`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
