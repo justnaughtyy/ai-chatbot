@@ -15,7 +15,7 @@ app.use(express.json());
 
 // --- 2. CONNECTIONS ---
 const projectId = process.env.GOOGLE_CLOUD_PROJECT_ID;
-const keyFilename = './unichatbot56-e74c2bbcbdc8.json';
+const keyFilename = './unichatbot56-286fadf12cae.json';
 if (!projectId || !keyFilename || !process.env.GROQ_API_KEY || !process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY || !process.env.HF_TOKEN) {
     console.error("🔴 FATAL ERROR: Env vars missing."); process.exit(1);
 }
