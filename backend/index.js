@@ -210,7 +210,7 @@ ${userMessage}
                     { role: 'system', content: systemPrompt },
                     { role: 'user', content: userPrompt }
                 ],
-                model: 'llama-3-70b-8192', // ‼️ V33.9 FIX: ใช้ 70b ที่ถูกต้อง
+                model: 'llama-3.3-70b-versatile', // ‼️ V33.9 FIX: ใช้ 70b ที่ถูกต้อง
                 temperature: 0.0,
                 response_format: { type: "json_object" },
             },
