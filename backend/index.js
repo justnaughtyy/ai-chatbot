@@ -71,7 +71,7 @@ async function getRecentChatHistory(roomId, limit = 3) {
 
 // --- 4. HELPER FUNCTION: Vector Search (V33.7 FIX) ---
 // (Section นี้เหมือนเดิม V33.7 ไม่ต้องแก้)
-async function searchVectorDatabase(query, matchCount = 1, threshold = 0.60) {
+async function searchVectorDatabase(query, matchCount = 3, threshold = 0.60) {
     console.log(`[VECTOR V13] HF Multi-Search (${embeddingModelName}) for: "${query}" (Count: ${matchCount}, Threshold: ${threshold})`);
     if (!hf || !supabase) {
         console.error("🔴 Vector Search Error: HF client or Supabase client not initialized.");
@@ -428,7 +428,7 @@ app.post('/api/chat', async (req, res) => {
             
             // ดึงข้อมูลมาแค่ 3 ชิ้นที่คะแนนความเหมือน (Similarity) สูงที่สุดก็พอ 
             // ไม่ต้องเผื่อไว้ 10 ชิ้นแล้วเพราะเราไม่ได้เอามาฟิลเตอร์เปิด/ปิดเทอมต่อแล้ว
-            let retrievedDocs = await searchVectorDatabase(search_topic, 1, 0.60);
+            let retrievedDocs = await searchVectorDatabase(search_topic, 3, 0.60);
 
             // 6. เรียกใช้ V31 Synthesizer
             botResponse = await callGroqLLM_RAG_V21_Synthesizer(
