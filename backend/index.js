@@ -71,7 +71,7 @@ async function getRecentChatHistory(roomId, limit = 3) {
 
 // --- 4. HELPER FUNCTION: Vector Search (V33.7 FIX) ---
 // (Section นี้เหมือนเดิม V33.7 ไม่ต้องแก้)
-async function searchVectorDatabase(query, matchCount = 3, threshold = 0.60) {
+async function searchVectorDatabase(query, matchCount = 1, threshold = 0.60) {
     console.log(`[VECTOR V13] HF Multi-Search (${embeddingModelName}) for: "${query}" (Count: ${matchCount}, Threshold: ${threshold})`);
     if (!hf || !supabase) {
         console.error("🔴 Vector Search Error: HF client or Supabase client not initialized.");
