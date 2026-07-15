@@ -325,7 +325,7 @@ async function callGroqLLM_RAG_V21_Synthesizer(userId, userMessage, retrievedDoc
         ];
         const chatCompletion = await groq.chat.completions.create({
             messages: messagesForGroq,
-            model: 'llama-3.1-8b-instant',
+            model: 'llama-3.3-70b-versatile',
             temperature: 0.1,
             max_tokens: 1024
         }, { signal: controller.signal });
@@ -428,7 +428,7 @@ app.post('/api/chat', async (req, res) => {
             
             // ดึงข้อมูลมาแค่ 3 ชิ้นที่คะแนนความเหมือน (Similarity) สูงที่สุดก็พอ 
             // ไม่ต้องเผื่อไว้ 10 ชิ้นแล้วเพราะเราไม่ได้เอามาฟิลเตอร์เปิด/ปิดเทอมต่อแล้ว
-            let retrievedDocs = await searchVectorDatabase(search_topic, 3, 0.70);
+            let retrievedDocs = await searchVectorDatabase(search_topic, 1, 0.60);
 
             // 6. เรียกใช้ V31 Synthesizer
             botResponse = await callGroqLLM_RAG_V21_Synthesizer(
