@@ -310,6 +310,9 @@ async function callGroqLLM_RAG_V21_Synthesizer(userId, userMessage, retrievedDoc
             return "ขออภัยค่ะ ฉันไม่มีข้อมูลในส่วนนี้";
         }
         const historyString = recentHistory.map(h => `${h.role}: ${h.content}`).join('\n');
+        console.log("============= 🔍 [DEBUG RAG] เอกสารที่ส่งให้ AI อ่าน =============");
+        console.log(contextString);
+        console.log("===============================================================");
         const userPrompt = `
         ## เอกสารข้อมูล (สำหรับใช้สังเคราะห์คำตอบ "ทั้งหมด"):
         ${contextString}
@@ -424,7 +427,7 @@ app.post('/api/chat', async (req, res) => {
 
             // 3. และ 4. ค้นหา Vector Database ด้วย "Search Topic"
             console.log(`[QUERY] Using Topic Search: "${search_topic}"`);
-            
+
             // ดึงข้อมูลมาแค่ 3 ชิ้นที่คะแนนความเหมือน (Similarity) สูงที่สุดก็พอ 
             // ไม่ต้องเผื่อไว้ 10 ชิ้นแล้วเพราะเราไม่ได้เอามาฟิลเตอร์เปิด/ปิดเทอมต่อแล้ว
             let retrievedDocs = await searchVectorDatabase(search_topic, 3, 0.60);
